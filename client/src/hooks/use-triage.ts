@@ -6,12 +6,12 @@ import { useToast } from "@/hooks/use-toast";
 export interface TriageState {
   currentScreen: 'input' | 'questioning' | 'soap-note';
   currentQuestion: number;
-  maxQuestions: number;
   complaint: string;
   conversationHistory: ConversationEntry[];
   generatedSoapNote: SOAPNote | null;
   isLoading: boolean;
   error: string | null;
+  isComplete: boolean;
 }
 
 export function useTriage() {
@@ -19,12 +19,12 @@ export function useTriage() {
   const [state, setState] = useState<TriageState>({
     currentScreen: 'input',
     currentQuestion: 1,
-    maxQuestions: 3,
     complaint: '',
     conversationHistory: [],
     generatedSoapNote: null,
     isLoading: false,
-    error: null
+    error: null,
+    isComplete: false
   });
 
   const setLoading = useCallback((loading: boolean) => {
@@ -92,8 +92,14 @@ export function useTriage() {
       const updatedHistory = [...state.conversationHistory];
       updatedHistory[updatedHistory.length - 1].answer = answer.trim();
 
-      if (state.currentQuestion < state.maxQuestions) {
-        // Generate next question
+      // Ask AI to determine if we have enough information or need more questions
+      const shouldContinue = await geminiService.shouldContinueQuestioning(
+        state.complaint,
+        updatedHistory
+      );
+
+      if (shouldContinue.needsMoreInfo) {
+        // Generate next question based on what's still needed
         const nextQuestion = await geminiService.generateQuestion(
           state.complaint,
           updatedHistory,
@@ -110,12 +116,13 @@ export function useTriage() {
           isLoading: false
         }));
       } else {
-        // Generate SOAP note
+        // Generate SOAP note - we have enough information
         setState(prev => ({
           ...prev,
           conversationHistory: updatedHistory,
           currentScreen: 'soap-note',
-          isLoading: true
+          isLoading: true,
+          isComplete: true
         }));
 
         const soapNote = await geminiService.generateSOAPNote(
@@ -138,7 +145,7 @@ export function useTriage() {
 
         toast({
           title: "Assessment Complete",
-          description: "Your clinical assessment has been generated and saved.",
+          description: "Sufficient information gathered for clinical assessment.",
         });
       }
     } catch (error) {
@@ -150,12 +157,12 @@ export function useTriage() {
     setState({
       currentScreen: 'input',
       currentQuestion: 1,
-      maxQuestions: 3,
       complaint: '',
       conversationHistory: [],
       generatedSoapNote: null,
       isLoading: false,
-      error: null
+      error: null,
+      isComplete: false
     });
 
     toast({
@@ -170,16 +177,11 @@ export function useTriage() {
     return lastEntry.answer === '' ? lastEntry.question : null;
   }, [state.conversationHistory]);
 
-  const getProgress = useCallback(() => {
-    return (state.currentQuestion / state.maxQuestions) * 100;
-  }, [state.currentQuestion, state.maxQuestions]);
-
   return {
     state,
     startTriage,
     submitAnswer,
     resetTriage,
-    getCurrentQuestion,
-    getProgress
+    getCurrentQuestion
   };
 }

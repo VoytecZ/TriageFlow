@@ -12,6 +12,12 @@ export interface SOAPNote {
   plan: string;
 }
 
+export interface QuestioningDecision {
+  needsMoreInfo: boolean;
+  reasoning: string;
+  suggestedFocus?: string;
+}
+
 class GeminiService {
   private apiKey: string;
   private apiUrl: string;
@@ -48,6 +54,58 @@ class GeminiService {
     }
   }
 
+  async shouldContinueQuestioning(complaint: string, conversationHistory: ConversationEntry[]): Promise<QuestioningDecision> {
+    // Create context from conversation history
+    const historyContext = conversationHistory.map((entry, index) => 
+      `${index === 0 ? 'Primary complaint' : `Question ${index}`}: ${entry.question}\nPatient response: ${entry.answer}`
+    ).join('\n\n');
+
+    const prompt = `You are a medical AI assistant conducting a patient triage interview. Based on the information gathered so far, determine if you have sufficient clinical information to write a comprehensive SOAP note, or if more questions are needed.
+
+Primary complaint: ${complaint}
+
+Conversation so far:
+${historyContext}
+
+Consider these clinical areas:
+- Onset, duration, severity, quality of symptoms
+- Associated symptoms and red flags
+- Relevant medical history and medications
+- Aggravating/alleviating factors
+- Risk factors for serious conditions
+
+Respond in JSON format:
+{
+  "needsMoreInfo": boolean,
+  "reasoning": "Brief explanation of decision",
+  "suggestedFocus": "If more info needed, what area to focus on next"
+}
+
+Guidelines:
+- If you have enough information for a basic clinical assessment (minimum 3-4 relevant clinical details), set needsMoreInfo to false
+- If critical information is missing (severity, timing, red flag symptoms, relevant history), set needsMoreInfo to true
+- Avoid asking redundant questions
+- Prioritize questions that could identify serious conditions`;
+
+    try {
+      const response = await this.makeAPICall(prompt);
+      const decision = JSON.parse(response);
+      return {
+        needsMoreInfo: Boolean(decision.needsMoreInfo),
+        reasoning: decision.reasoning || "",
+        suggestedFocus: decision.suggestedFocus || ""
+      };
+    } catch (error) {
+      console.error("Error determining questioning continuation:", error);
+      // Default to continuing if we have fewer than 3 questions
+      return {
+        needsMoreInfo: conversationHistory.length < 4,
+        reasoning: "Error parsing AI response, using fallback logic",
+        suggestedFocus: "general clinical details"
+      };
+    }
+  }
+
   async generateQuestion(complaint: string, conversationHistory: ConversationEntry[], questionNumber: number): Promise<string> {
     // Create context from conversation history
     const historyContext = conversationHistory.map((entry, index) => 
@@ -61,11 +119,19 @@ Primary complaint: ${complaint}
 Previous conversation:
 ${historyContext}
 
-This is question ${questionNumber} of 3. Generate a clear, professional medical question that:
+Focus on gathering information about:
+- Onset, duration, severity, quality of symptoms
+- Associated symptoms that could indicate serious conditions
+- Relevant medical history, medications, risk factors
+- Aggravating/alleviating factors
+- Red flag symptoms requiring immediate attention
+
+Generate a clear, professional medical question that:
 1. Gathers specific clinical details relevant to the complaint
 2. Helps assess severity, duration, or associated symptoms
 3. Is appropriate for a patient to answer
 4. Avoids asking for information already provided
+5. Prioritizes identifying potentially serious conditions
 
 Generate only the question, no additional text or formatting:`;
 

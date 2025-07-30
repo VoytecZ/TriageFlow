@@ -8,7 +8,6 @@ import { Bot, ArrowRight } from "lucide-react";
 interface QuestioningFlowProps {
   currentQuestion: string | null;
   questionNumber: number;
-  maxQuestions: number;
   conversationHistory: Array<{ question: string; answer: string }>;
   isLoading: boolean;
   onSubmitAnswer: (answer: string) => void;
@@ -17,7 +16,6 @@ interface QuestioningFlowProps {
 export function QuestioningFlow({
   currentQuestion,
   questionNumber,
-  maxQuestions,
   conversationHistory,
   isLoading,
   onSubmitAnswer
@@ -38,8 +36,6 @@ export function QuestioningFlow({
     }
   };
 
-  const progress = (questionNumber / maxQuestions) * 100;
-
   return (
     <div className="animate-slide-up space-y-6">
       <Card className="shadow-lg">
@@ -47,9 +43,9 @@ export function QuestioningFlow({
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Assessment Questions</h2>
             <div className="flex items-center space-x-4 text-medical-blue-500">
-              <span className="text-sm font-medium">Question {questionNumber} of {maxQuestions}</span>
-              <div className="w-24">
-                <Progress value={progress} className="h-2" />
+              <span className="text-sm font-medium">Question {questionNumber}</span>
+              <div className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+                AI will determine when complete
               </div>
             </div>
           </div>

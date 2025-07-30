@@ -19,8 +19,7 @@ export default function Home() {
     startTriage,
     submitAnswer,
     resetTriage,
-    getCurrentQuestion,
-    getProgress
+    getCurrentQuestion
   } = useTriage();
 
   useEffect(() => {
@@ -115,7 +114,6 @@ export default function Home() {
           <QuestioningFlow
             currentQuestion={getCurrentQuestion()}
             questionNumber={state.currentQuestion}
-            maxQuestions={state.maxQuestions}
             conversationHistory={state.conversationHistory.filter(entry => entry.answer !== '')}
             isLoading={state.isLoading}
             onSubmitAnswer={submitAnswer}
