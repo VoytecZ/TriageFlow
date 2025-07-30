@@ -74,7 +74,7 @@ Consider these clinical areas:
 - Aggravating/alleviating factors
 - Risk factors for serious conditions
 
-Respond in JSON format:
+Respond ONLY in valid JSON format with no additional text or markdown:
 {
   "needsMoreInfo": boolean,
   "reasoning": "Brief explanation of decision",
@@ -89,7 +89,17 @@ Guidelines:
 
     try {
       const response = await this.makeAPICall(prompt);
-      const decision = JSON.parse(response);
+      
+      // Clean the response - remove any markdown formatting or extra text
+      let cleanResponse = response.trim();
+      if (cleanResponse.startsWith('```json')) {
+        cleanResponse = cleanResponse.replace(/```json\n?/, '').replace(/\n?```$/, '');
+      }
+      if (cleanResponse.startsWith('```')) {
+        cleanResponse = cleanResponse.replace(/```\n?/, '').replace(/\n?```$/, '');
+      }
+      
+      const decision = JSON.parse(cleanResponse);
       return {
         needsMoreInfo: Boolean(decision.needsMoreInfo),
         reasoning: decision.reasoning || "",
@@ -97,7 +107,7 @@ Guidelines:
       };
     } catch (error) {
       console.error("Error determining questioning continuation:", error);
-      // Default to continuing if we have fewer than 3 questions
+      // Default to continuing if we have fewer than 4 questions
       return {
         needsMoreInfo: conversationHistory.length < 4,
         reasoning: "Error parsing AI response, using fallback logic",
@@ -149,58 +159,43 @@ Generate only the question, no additional text or formatting:`;
 Patient Interview:
 ${fullConversation}
 
-Generate a SOAP note with these exact sections:
-
-SUBJECTIVE: Summarize the patient's chief complaint and symptoms in their own words, including relevant details about onset, duration, severity, quality, and associated symptoms.
-
-OBJECTIVE: State "No objective data collected by this application. Physical examination and vital signs should be obtained during clinical assessment."
-
-ASSESSMENT: Provide a preliminary assessment based on the subjective data. Include possible differential diagnoses but clearly state this is a preliminary AI assessment, not a medical diagnosis.
-
-PLAN: Recommend appropriate next steps including physician evaluation, and mention any urgent care considerations if applicable.
-
-Format your response as JSON with keys: "subjective", "objective", "assessment", "plan"`;
+Respond with ONLY valid JSON in this exact format (no additional text or markdown):
+{
+  "subjective": "Summarize the patient's chief complaint and symptoms in their own words, including relevant details about onset, duration, severity, quality, and associated symptoms.",
+  "objective": "No objective data collected by this application. Physical examination and vital signs should be obtained during clinical assessment.",
+  "assessment": "Provide a preliminary assessment based on the subjective data. Include possible differential diagnoses but clearly state this is a preliminary AI assessment, not a medical diagnosis.",
+  "plan": "Recommend appropriate next steps including physician evaluation, and mention any urgent care considerations if applicable."
+}`;
 
     try {
       const response = await this.makeAPICall(prompt);
       
-      // Try to parse as JSON first
-      try {
-        const jsonResponse = JSON.parse(response);
-        return {
-          subjective: jsonResponse.subjective || "",
-          objective: jsonResponse.objective || "No objective data collected by this application. Physical examination and vital signs should be obtained during clinical assessment.",
-          assessment: jsonResponse.assessment || "",
-          plan: jsonResponse.plan || ""
-        };
-      } catch (jsonError) {
-        // If JSON parsing fails, parse the text manually
-        const sections = response.split(/\n(?=SUBJECTIVE|OBJECTIVE|ASSESSMENT|PLAN)/i);
-        const soapNote: SOAPNote = {
-          subjective: "",
-          objective: "No objective data collected by this application. Physical examination and vital signs should be obtained during clinical assessment.",
-          assessment: "",
-          plan: ""
-        };
-
-        sections.forEach(section => {
-          const trimmed = section.trim();
-          if (trimmed.toLowerCase().startsWith('subjective')) {
-            soapNote.subjective = trimmed.replace(/^subjective:?\s*/i, '');
-          } else if (trimmed.toLowerCase().startsWith('objective')) {
-            soapNote.objective = trimmed.replace(/^objective:?\s*/i, '');
-          } else if (trimmed.toLowerCase().startsWith('assessment')) {
-            soapNote.assessment = trimmed.replace(/^assessment:?\s*/i, '');
-          } else if (trimmed.toLowerCase().startsWith('plan')) {
-            soapNote.plan = trimmed.replace(/^plan:?\s*/i, '');
-          }
-        });
-
-        return soapNote;
+      // Clean the response - remove any markdown formatting or extra text
+      let cleanResponse = response.trim();
+      if (cleanResponse.startsWith('```json')) {
+        cleanResponse = cleanResponse.replace(/```json\n?/, '').replace(/\n?```$/, '');
       }
+      if (cleanResponse.startsWith('```')) {
+        cleanResponse = cleanResponse.replace(/```\n?/, '').replace(/\n?```$/, '');
+      }
+      
+      const jsonResponse = JSON.parse(cleanResponse);
+      return {
+        subjective: jsonResponse.subjective || `Patient reports: ${complaint}. ${conversationHistory.map(entry => entry.answer).filter(Boolean).join(' ')}`,
+        objective: jsonResponse.objective || "No objective data collected by this application. Physical examination and vital signs should be obtained during clinical assessment.",
+        assessment: jsonResponse.assessment || "Preliminary assessment pending physician review.",
+        plan: jsonResponse.plan || "Recommend physician evaluation for further assessment."
+      };
     } catch (error) {
       console.error("Error generating SOAP note:", error);
-      throw new Error("Failed to generate clinical assessment");
+      
+      // Fallback SOAP note with actual patient data
+      return {
+        subjective: `Patient reports: ${complaint}. Additional details: ${conversationHistory.map(entry => `${entry.question} - Patient answered: ${entry.answer}`).join('; ')}`,
+        objective: "No objective data collected by this application. Physical examination and vital signs should be obtained during clinical assessment.",
+        assessment: "Preliminary AI assessment based on patient-reported symptoms. This is not a medical diagnosis and requires physician evaluation.",
+        plan: "Recommend urgent physician evaluation for proper clinical assessment and management."
+      };
     }
   }
 }

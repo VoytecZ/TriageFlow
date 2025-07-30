@@ -31,7 +31,18 @@ export default function PhysicianReview() {
 
   const formatTimestamp = (timestamp: any) => {
     try {
-      const date = timestamp.toDate();
+      // Handle both Firestore timestamps and demo timestamps
+      let date: Date;
+      if (timestamp && typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+      } else if (timestamp && timestamp.seconds) {
+        date = new Date(timestamp.seconds * 1000);
+      } else if (timestamp instanceof Date) {
+        date = timestamp;
+      } else {
+        return "Unknown time";
+      }
+      
       const now = new Date();
       const diff = now.getTime() - date.getTime();
       const hours = Math.floor(diff / (1000 * 60 * 60));
