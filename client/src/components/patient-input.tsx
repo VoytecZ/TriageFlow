@@ -17,7 +17,8 @@ export function PatientInput({ onStartTriage, isLoading }: PatientInputProps) {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && e.ctrlKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleSubmit();
     }
   };
@@ -43,10 +44,11 @@ export function PatientInput({ onStartTriage, isLoading }: PatientInputProps) {
               placeholder="For example: I have been experiencing severe headaches for the past 3 days..."
               value={complaint}
               onChange={(e) => setComplaint(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               className="min-h-[100px] resize-none"
               disabled={isLoading}
             />
+            <p className="text-xs text-gray-500 mt-1">Press Enter to submit • Shift+Enter for new line</p>
             
             <Button 
               onClick={handleSubmit}

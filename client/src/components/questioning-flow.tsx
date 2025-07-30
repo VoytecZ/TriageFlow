@@ -32,7 +32,8 @@ export function QuestioningFlow({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && e.ctrlKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleSubmit();
     }
   };
@@ -88,9 +89,10 @@ export function QuestioningFlow({
                   placeholder="Please provide as much detail as possible..."
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyPress}
                   className="min-h-[80px] resize-none"
                 />
+                <p className="text-xs text-gray-500">Press Enter to submit • Shift+Enter for new line</p>
                 
                 <Button 
                   onClick={handleSubmit}
