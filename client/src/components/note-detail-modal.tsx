@@ -56,18 +56,26 @@ export function NoteDetailModal({ note, open, onOpenChange }: NoteDetailModalPro
           {/* Complete Conversation History */}
           <div>
             <h4 className="font-semibold text-gray-900 mb-3">Complete Conversation History</h4>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {note.conversationHistory.map((entry, index) => (
-                <div 
-                  key={index} 
-                  className={`border-l-4 pl-4 py-2 ${
-                    index === 0 ? 'border-medical-blue-500' : 'border-gray-300'
-                  }`}
-                >
-                  <p className="text-sm font-medium text-gray-600">
-                    {index === 0 ? 'Primary Complaint:' : `Q${index}: ${entry.question}`}
-                  </p>
-                  <p className="text-gray-800">{entry.answer}</p>
+                <div key={index} className="space-y-2">
+                  {index === 0 ? (
+                    <div className="border-l-4 border-medical-blue-500 pl-4 py-2">
+                      <p className="text-sm font-medium text-medical-blue-600">Primary Complaint:</p>
+                      <p className="text-gray-800">{entry.answer}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="border-l-4 border-gray-300 pl-4 py-2">
+                        <p className="text-sm font-medium text-gray-600">Question {index}:</p>
+                        <p className="text-gray-800">{entry.question}</p>
+                      </div>
+                      <div className="border-l-4 border-green-300 pl-4 py-2 ml-2">
+                        <p className="text-sm font-medium text-green-600">Patient Answer:</p>
+                        <p className="text-gray-800">{entry.answer}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

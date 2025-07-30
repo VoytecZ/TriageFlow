@@ -110,13 +110,28 @@ export function QuestioningFlow({
       <Card className="shadow-lg">
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Conversation Summary</h3>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {conversationHistory.map((entry, index) => (
-              <div key={index} className="border-l-4 border-gray-200 pl-4 py-2">
-                <p className="text-sm font-medium text-gray-600">
-                  {index === 0 ? 'Primary Complaint' : `Question ${index}`}:
-                </p>
-                <p className="text-gray-800">{entry.answer}</p>
+              <div key={index} className="space-y-2">
+                {index === 0 ? (
+                  <div className="border-l-4 border-medical-blue-500 pl-4 py-2">
+                    <p className="text-sm font-medium text-medical-blue-600">Primary Complaint:</p>
+                    <p className="text-gray-800">{entry.answer}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="border-l-4 border-gray-300 pl-4 py-2">
+                      <p className="text-sm font-medium text-gray-600">Question {index}:</p>
+                      <p className="text-gray-800">{entry.question}</p>
+                    </div>
+                    {entry.answer && (
+                      <div className="border-l-4 border-green-300 pl-4 py-2 ml-2">
+                        <p className="text-sm font-medium text-green-600">Your Answer:</p>
+                        <p className="text-gray-800">{entry.answer}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

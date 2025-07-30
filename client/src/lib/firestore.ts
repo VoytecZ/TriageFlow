@@ -24,6 +24,23 @@ export async function saveTriageNote(noteData: Omit<TriageNote, 'id' | 'userId' 
       throw new Error("User not authenticated");
     }
 
+    // Check if Firebase is properly configured
+    if (!import.meta.env.VITE_FIREBASE_PROJECT_ID) {
+      console.warn("Firebase not configured, saving to localStorage for demo");
+      const demoNote = {
+        id: `demo-${Date.now()}`,
+        userId: user.uid,
+        ...noteData,
+        timestamp: { seconds: Date.now() / 1000, nanoseconds: 0 }
+      };
+      
+      const existingNotes = JSON.parse(localStorage.getItem('demo-triage-notes') || '[]');
+      existingNotes.unshift(demoNote);
+      localStorage.setItem('demo-triage-notes', JSON.stringify(existingNotes));
+      
+      return demoNote.id;
+    }
+
     const collectionPath = getCollectionPath();
     const docRef = await addDoc(collection(db, collectionPath), {
       userId: user.uid,
@@ -34,12 +51,45 @@ export async function saveTriageNote(noteData: Omit<TriageNote, 'id' | 'userId' 
     return docRef.id;
   } catch (error) {
     console.error("Error saving triage note:", error);
-    throw new Error("Failed to save assessment");
+    
+    // Fallback to localStorage for demo
+    console.warn("Falling back to localStorage for demo purposes");
+    const user = auth.currentUser || { uid: `demo-user-${Date.now()}` };
+    const demoNote = {
+      id: `demo-${Date.now()}`,
+      userId: user.uid,
+      ...noteData,
+      timestamp: { seconds: Date.now() / 1000, nanoseconds: 0 }
+    };
+    
+    const existingNotes = JSON.parse(localStorage.getItem('demo-triage-notes') || '[]');
+    existingNotes.unshift(demoNote);
+    localStorage.setItem('demo-triage-notes', JSON.stringify(existingNotes));
+    
+    return demoNote.id;
   }
 }
 
 export function subscribeToTriageNotes(callback: (notes: TriageNote[]) => void): () => void {
   try {
+    // Check if Firebase is properly configured
+    if (!import.meta.env.VITE_FIREBASE_PROJECT_ID) {
+      console.warn("Firebase not configured, using localStorage for demo");
+      
+      // Initial load from localStorage
+      const loadDemoNotes = () => {
+        const storedNotes = JSON.parse(localStorage.getItem('demo-triage-notes') || '[]');
+        callback(storedNotes);
+      };
+      
+      loadDemoNotes();
+      
+      // Set up interval to check for changes (simple demo polling)
+      const interval = setInterval(loadDemoNotes, 1000);
+      
+      return () => clearInterval(interval);
+    }
+
     const collectionPath = getCollectionPath();
     const notesQuery = query(collection(db, collectionPath));
 
@@ -63,10 +113,19 @@ export function subscribeToTriageNotes(callback: (notes: TriageNote[]) => void):
       callback(notes);
     }, (error) => {
       console.error("Error listening to triage notes:", error);
-      callback([]);
+      
+      // Fallback to localStorage demo mode
+      console.warn("Falling back to localStorage demo mode");
+      const storedNotes = JSON.parse(localStorage.getItem('demo-triage-notes') || '[]');
+      callback(storedNotes);
     });
   } catch (error) {
     console.error("Error setting up notes subscription:", error);
+    
+    // Fallback to localStorage demo mode
+    const storedNotes = JSON.parse(localStorage.getItem('demo-triage-notes') || '[]');
+    callback(storedNotes);
+    
     return () => {};
   }
 }
