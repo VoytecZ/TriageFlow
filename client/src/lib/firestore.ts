@@ -1,5 +1,5 @@
 import { collection, addDoc, onSnapshot, query, Timestamp } from "firebase/firestore";
-import { db, auth } from "./firebase";
+import { db, auth, initializeAuth } from "./firebase";
 import { ConversationEntry, SOAPNote } from "./gemini";
 
 export interface TriageNote {
@@ -19,9 +19,16 @@ function getCollectionPath(): string {
 
 export async function saveTriageNote(noteData: Omit<TriageNote, 'id' | 'userId' | 'timestamp'>): Promise<string> {
   try {
-    const user = auth.currentUser;
+    // Try to get current user, initialize auth if needed
+    let user = auth.currentUser;
+    let userId: string;
+    
     if (!user) {
-      throw new Error("User not authenticated");
+      console.log("No current user, attempting authentication...");
+      const authUser = await initializeAuth();
+      userId = authUser?.uid || `demo-user-${Date.now()}`;
+    } else {
+      userId = user.uid;
     }
 
     // Check if Firebase is properly configured
@@ -29,7 +36,7 @@ export async function saveTriageNote(noteData: Omit<TriageNote, 'id' | 'userId' 
       console.warn("Firebase not configured, saving to localStorage for demo");
       const demoNote = {
         id: `demo-${Date.now()}`,
-        userId: user.uid,
+        userId: userId,
         ...noteData,
         timestamp: { seconds: Date.now() / 1000, nanoseconds: 0 }
       };
@@ -43,7 +50,7 @@ export async function saveTriageNote(noteData: Omit<TriageNote, 'id' | 'userId' 
 
     const collectionPath = getCollectionPath();
     const docRef = await addDoc(collection(db, collectionPath), {
-      userId: user.uid,
+      userId: userId,
       ...noteData,
       timestamp: Timestamp.now()
     });
@@ -54,10 +61,10 @@ export async function saveTriageNote(noteData: Omit<TriageNote, 'id' | 'userId' 
     
     // Fallback to localStorage for demo
     console.warn("Falling back to localStorage for demo purposes");
-    const user = auth.currentUser || { uid: `demo-user-${Date.now()}` };
+    const demoUserId = auth.currentUser?.uid || `demo-user-${Date.now()}`;
     const demoNote = {
       id: `demo-${Date.now()}`,
-      userId: user.uid,
+      userId: demoUserId,
       ...noteData,
       timestamp: { seconds: Date.now() / 1000, nanoseconds: 0 }
     };

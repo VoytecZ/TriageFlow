@@ -60,32 +60,33 @@ class GeminiService {
       `${index === 0 ? 'Primary complaint' : `Question ${index}`}: ${entry.question}\nPatient response: ${entry.answer}`
     ).join('\n\n');
 
-    const prompt = `You are a medical AI assistant conducting a patient triage interview. Based on the information gathered so far, determine if you have sufficient clinical information to write a comprehensive SOAP note, or if more questions are needed.
+    const prompt = `You are a medical AI assistant conducting a patient triage interview. Based on the conversation flow so far, determine if you have sufficient clinical information for a comprehensive SOAP note, or if more questions are needed following a natural progression.
 
 Primary complaint: ${complaint}
 
 Conversation so far:
 ${historyContext}
 
-Consider these clinical areas:
-- Onset, duration, severity, quality of symptoms
-- Associated symptoms and red flags
-- Relevant medical history and medications
-- Aggravating/alleviating factors
-- Risk factors for serious conditions
+Natural questioning progression:
+1. Basic characterization: Onset, duration, severity, quality of main symptom
+2. Associated symptoms: Directly related to the main complaint  
+3. Modifying factors: What makes it better/worse, triggers
+4. Context: Medical history, medications, risk factors
 
-Respond ONLY in valid JSON format with no additional text or markdown:
+Current conversation stage: Question ${conversationHistory.length}
+
+Respond ONLY in valid JSON format:
 {
   "needsMoreInfo": boolean,
-  "reasoning": "Brief explanation of decision",
-  "suggestedFocus": "If more info needed, what area to focus on next"
+  "reasoning": "Brief explanation focusing on clinical completeness and natural flow",
+  "suggestedFocus": "Next logical area to explore if more info needed"
 }
 
-Guidelines:
-- If you have enough information for a basic clinical assessment (minimum 3-4 relevant clinical details), set needsMoreInfo to false
-- If critical information is missing (severity, timing, red flag symptoms, relevant history), set needsMoreInfo to true
-- Avoid asking redundant questions
-- Prioritize questions that could identify serious conditions`;
+Decision criteria:
+- STOP questioning if: You have basic characterization (onset, duration, severity) + associated symptoms + sufficient clinical context (usually 4-6 questions)
+- CONTINUE if: Missing basic characterization OR early in natural progression OR critical red flags need exploration
+- Prioritize clinical completeness over question count
+- Ensure natural flow rather than jumping between unrelated topics`;
 
     try {
       const response = await this.makeAPICall(prompt);
@@ -122,28 +123,32 @@ Guidelines:
       `${index === 0 ? 'Primary complaint' : `Question ${index}`}: ${entry.question}\nPatient response: ${entry.answer}`
     ).join('\n\n');
 
-    const prompt = `You are a medical AI assistant conducting a patient triage interview. Based on the patient's complaint and previous responses, generate ONE specific, relevant follow-up question to gather important clinical information.
+    const prompt = `You are a medical AI assistant conducting a patient triage interview. Generate ONE conversational, natural follow-up question that flows logically from the previous conversation.
 
 Primary complaint: ${complaint}
 
 Previous conversation:
 ${historyContext}
 
-Focus on gathering information about:
-- Onset, duration, severity, quality of symptoms
-- Associated symptoms that could indicate serious conditions
-- Relevant medical history, medications, risk factors
-- Aggravating/alleviating factors
-- Red flag symptoms requiring immediate attention
+Follow this natural questioning flow:
+1. First questions: Start with basic characterization (onset, duration, severity, quality)
+2. Then explore: Associated symptoms directly related to the main complaint
+3. Next ask about: Aggravating/alleviating factors, triggers
+4. Finally assess: Medical history, medications, risk factors
 
-Generate a clear, professional medical question that:
-1. Gathers specific clinical details relevant to the complaint
-2. Helps assess severity, duration, or associated symptoms
-3. Is appropriate for a patient to answer
-4. Avoids asking for information already provided
-5. Prioritizes identifying potentially serious conditions
+Make the question:
+- Conversational and natural (like a caring healthcare provider would ask)
+- Directly related to what the patient just shared
+- Progressive - build on previous answers rather than jumping topics
+- Appropriate for the stage of the conversation
+- Focused on one specific aspect at a time
 
-Generate only the question, no additional text or formatting:`;
+Examples of good flow:
+- After chest pain complaint: "When did this chest pain start?"
+- After timing established: "Can you describe what the pain feels like?"
+- After pain description: "Does anything make the pain better or worse?"
+
+Generate only the question, no additional text:`;
 
     return await this.makeAPICall(prompt);
   }
