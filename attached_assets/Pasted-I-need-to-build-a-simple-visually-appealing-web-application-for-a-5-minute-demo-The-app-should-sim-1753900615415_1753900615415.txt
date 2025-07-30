@@ -1,0 +1,98 @@
+I need to build a simple, visually appealing web application for a 5-minute demo. The app should simulate an AI-powered patient triage system.
+
+Here are the core requirements:
+
+Patient Input Screen:
+
+A clean, modern interface with a prominent text input field for the patient's primary complaint.
+
+A "Start Triage" button to initiate the process.
+
+Use Tailwind CSS for styling to ensure a polished look.
+
+Adaptive Questioning Flow:
+
+After the initial complaint, the app should display 2-3 follow-up questions one at a time.
+
+These questions should be generated dynamically by an LLM (Gemini API). For this demo, focus the LLM's prompt on a single, predefined symptom category (e.g., "headache" or "sore throat") to simplify the responses.
+
+The user types their answer after each question.
+
+Implement a loading indicator while waiting for LLM responses.
+
+SOAP-like Note Generation:
+
+Once questioning is complete, use the LLM to synthesize the collected patient responses into a very basic "SOAP-like" note.
+
+S (Subjective): Patient's chief complaint and key symptoms.
+
+O (Objective): A placeholder (e.g., "No objective data collected by app.").
+
+A (Assessment): A high-level, AI-generated "possible" assessment (emphasize it's not a diagnosis).
+
+P (Plan): A generic suggestion (e.g., "Recommend physician review for further assessment.").
+
+Display this generated note clearly to the user.
+
+Basic Data Storage (Firestore):
+
+After the note is generated, save the raw patient input and the final SOAP-like note to Google Cloud Firestore.
+
+Firestore Setup:
+
+Initialize Firebase using __firebase_config.
+
+Authenticate using signInWithCustomToken(__initial_auth_token) or signInAnonymously if the token is not defined.
+
+Store data in a public collection: /artifacts/{__app_id}/public/data/triage_notes.
+
+Each document in triage_notes should contain the userId (from auth.currentUser?.uid || crypto.randomUUID()), the initialComplaint, conversationHistory (array of objects {question, answer}), generatedSoapNote, and a timestamp.
+
+Ensure all Firestore operations happen after authentication is ready.
+
+Real-time Updates: Use onSnapshot to listen for new notes in the physician review.
+
+Physician Review Interface:
+
+A separate, simple screen accessible via a button (e.g., "View Notes").
+
+This screen should display a list of all submitted SOAP-like notes from Firestore.
+
+Clicking on a note in the list should display its full content (including raw conversation history and the generated SOAP note).
+
+Technology Stack:
+
+Frontend: HTML, JavaScript, Tailwind CSS (loaded via CDN).
+
+LLM: Gemini API (gemini-2.5-flash-preview-05-20). Make direct fetch calls from the client-side JavaScript.
+
+JavaScript
+
+let chatHistory = []; // Populate with user prompt and conversation
+const payload = { contents: chatHistory };
+const apiKey = ""; // Leave as-is, Replit will inject
+const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+});
+const result = await response.json();
+// Process result.candidates[0].content.parts[0].text
+Database: Google Cloud Firestore (loaded via CDN).
+
+General Requirements:
+
+The app should be fully responsive and look good on both mobile and desktop.
+
+Prioritize a clean, user-friendly interface for the demo.
+
+Include comprehensive comments in the code.
+
+No alert() or confirm() - use custom UI messages if needed.
+
+Add a loading spinner or message during API calls and data fetching.
+
+Display the userId on the physician review screen.
+
+Avoid orderBy() in Firestore queries; sort data in JavaScript if necessary.
